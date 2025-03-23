@@ -1,0 +1,16 @@
+<?php
+    class Config{
+        public $dbhost;
+        public $dbname;
+        public $dbuser;
+        public $dbpass;
+        
+        function __construct()
+        {
+            $this->dbhost = "localhost";
+            $this->dbname = "";
+            $this->dbuser = "";
+            $this->dbpass = "";
+        }
+    }
+?>
