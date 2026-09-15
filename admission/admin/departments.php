@@ -13,12 +13,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'add') {
         $level = (string) ($_POST['level'] ?? '');
+        $programType = (string) ($_POST['program_type'] ?? '');
         $code = strtoupper(trim((string) ($_POST['code'] ?? '')));
         $name = trim((string) ($_POST['name'] ?? ''));
         $sortOrder = (int) ($_POST['sort_order'] ?? 0);
 
         if (!in_array($level, ['ปวช.', 'ปวส.'], true)) {
             $errors[] = 'กรุณาเลือกระดับ';
+        }
+        if ($level === 'ปวช.') {
+            $programType = '';
+        } elseif ($level === 'ปวส.' && !in_array($programType, ['ภาคปกติ', 'ภาคสมทบ'], true)) {
+            $errors[] = 'กรุณาเลือกภาคของระดับ ปวส. (ภาคปกติ/ภาคสมทบ)';
         }
         if ($code === '' || !preg_match('/^[A-Z0-9_]{1,20}$/', $code)) {
             $errors[] = 'รหัสสาขาต้องเป็นตัวอักษร A-Z, 0-9 หรือ _ ความยาวไม่เกิน 20 ตัวอักษร';
@@ -29,14 +35,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($errors === []) {
             try {
-                $stmt = $db->prepare('INSERT INTO admission_departments (level, code, name, sort_order) VALUES (?, ?, ?, ?)');
-                $stmt->bind_param('sssi', $level, $code, $name, $sortOrder);
+                $stmt = $db->prepare('INSERT INTO admission_departments (level, program_type, code, name, sort_order) VALUES (?, ?, ?, ?, ?)');
+                $stmt->bind_param('ssssi', $level, $programType, $code, $name, $sortOrder);
                 $stmt->execute();
                 $stmt->close();
                 flash_set('success', 'เพิ่มสาขาวิชาเรียบร้อยแล้ว');
             } catch (mysqli_sql_exception $e) {
                 if ($e->getCode() === 1062) {
-                    $errors[] = 'มีรหัสสาขานี้ในระดับเดียวกันอยู่แล้ว';
+                    $errors[] = 'มีรหัสสาขานี้ในระดับ/ภาคเดียวกันอยู่แล้ว';
                 } else {
                     throw $e;
                 }
@@ -56,7 +62,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$rows = $db->query('SELECT * FROM admission_departments ORDER BY level, sort_order, name')->fetch_all(MYSQLI_ASSOC);
+$rows = $db->query('SELECT * FROM admission_departments ORDER BY level, program_type, sort_order, name')->fetch_all(MYSQLI_ASSOC);
 
 $pageTitle = 'จัดการสาขาวิชา';
 require __DIR__ . '/includes/layout_top.php';
@@ -85,6 +91,14 @@ $successMsg = flash_get('success');
                 </select>
             </div>
             <div class="form-group">
+                <label for="program_type">ภาค (เฉพาะ ปวส.)</label>
+                <select id="program_type" name="program_type">
+                    <option value="">-- ไม่มี (ปวช.) --</option>
+                    <option value="ภาคปกติ">ภาคปกติ</option>
+                    <option value="ภาคสมทบ">ภาคสมทบ</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="code">รหัสสาขา (A-Z, 0-9)</label>
                 <input type="text" id="code" name="code" maxlength="20" required>
             </div>
@@ -107,11 +121,11 @@ $successMsg = flash_get('success');
     <h2>สาขาวิชาทั้งหมด</h2>
     <div class="table-wrap">
         <table class="data-table">
-            <thead><tr><th>ระดับ</th><th>รหัส</th><th>ชื่อสาขา</th><th>ลำดับ</th><th>สถานะ</th><th></th></tr></thead>
+            <thead><tr><th>ระดับ/ภาค</th><th>รหัส</th><th>ชื่อสาขา</th><th>ลำดับ</th><th>สถานะ</th><th></th></tr></thead>
             <tbody>
                 <?php foreach ($rows as $row): ?>
                     <tr>
-                        <td><?= h($row['level']) ?></td>
+                        <td><?= h(format_level_label($row['level'], $row['program_type'])) ?></td>
                         <td><?= h($row['code']) ?></td>
                         <td><?= h($row['name']) ?></td>
                         <td><?= (int) $row['sort_order'] ?></td>

@@ -8,6 +8,7 @@ $db = get_db();
 $academicYear = ADMISSION_ACADEMIC_YEAR;
 
 $level = $_GET['level'] ?? '';
+$programType = $_GET['program_type'] ?? '';
 $status = $_GET['status'] ?? '';
 $departmentId = (int) ($_GET['department_id'] ?? 0);
 $q = trim((string) ($_GET['q'] ?? ''));
@@ -23,6 +24,11 @@ $types = 'i';
 if (in_array($level, ['ปวช.', 'ปวส.'], true)) {
     $where[] = 'a.level = ?';
     $params[] = $level;
+    $types .= 's';
+}
+if (in_array($programType, ['ภาคปกติ', 'ภาคสมทบ'], true)) {
+    $where[] = 'a.program_type = ?';
+    $params[] = $programType;
     $types .= 's';
 }
 if (in_array($status, $statuses, true)) {
@@ -56,7 +62,7 @@ $totalPages = max(1, (int) ceil($totalRows / $perPage));
 $page = min($page, $totalPages);
 $offset = ($page - 1) * $perPage;
 
-$listSql = "SELECT a.application_no, a.prefix, a.first_name, a.last_name, a.level, a.status, a.created_at,
+$listSql = "SELECT a.application_no, a.prefix, a.first_name, a.last_name, a.level, a.program_type, a.status, a.created_at,
                    d.name AS department_name
             FROM admission_applications a
             JOIN admission_departments d ON d.id = a.department_id
@@ -72,7 +78,7 @@ $listStmt->execute();
 $rows = $listStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $listStmt->close();
 
-$departments = array_merge(get_active_departments($db, 'ปวช.'), get_active_departments($db, 'ปวส.'));
+$departmentGroups = get_department_groups($db);
 
 function qs(array $overrides = []): string
 {
@@ -93,12 +99,19 @@ require __DIR__ . '/includes/layout_top.php';
             <option value="ปวช." <?= $level === 'ปวช.' ? 'selected' : '' ?>>ปวช.</option>
             <option value="ปวส." <?= $level === 'ปวส.' ? 'selected' : '' ?>>ปวส.</option>
         </select>
+        <select name="program_type">
+            <option value="">ทุกภาค (ปวส.)</option>
+            <option value="ภาคปกติ" <?= $programType === 'ภาคปกติ' ? 'selected' : '' ?>>ภาคปกติ</option>
+            <option value="ภาคสมทบ" <?= $programType === 'ภาคสมทบ' ? 'selected' : '' ?>>ภาคสมทบ</option>
+        </select>
         <select name="department_id">
             <option value="">ทุกสาขา</option>
-            <?php foreach ($departments as $d): ?>
-                <option value="<?= (int) $d['id'] ?>" <?= $departmentId === (int) $d['id'] ? 'selected' : '' ?>>
-                    <?= h($d['level'] . ' ' . $d['name']) ?>
-                </option>
+            <?php foreach ($departmentGroups as $group): ?>
+                <?php foreach ($group['departments'] as $d): ?>
+                    <option value="<?= (int) $d['id'] ?>" <?= $departmentId === (int) $d['id'] ? 'selected' : '' ?>>
+                        <?= h($group['label'] . ' ' . $d['name']) ?>
+                    </option>
+                <?php endforeach; ?>
             <?php endforeach; ?>
         </select>
         <select name="status">
@@ -126,7 +139,7 @@ require __DIR__ . '/includes/layout_top.php';
                     <tr>
                         <td><?= h($row['application_no']) ?></td>
                         <td><?= h($row['prefix'] . $row['first_name'] . ' ' . $row['last_name']) ?></td>
-                        <td><?= h($row['level'] . ' ' . $row['department_name']) ?></td>
+                        <td><?= h(format_level_label($row['level'], $row['program_type']) . ' ' . $row['department_name']) ?></td>
                         <td><span class="badge status-<?= h($row['status']) ?>"><?= h($row['status']) ?></span></td>
                         <td><?= h(date('d/m/Y H:i', strtotime((string) $row['created_at']))) ?></td>
                         <td><a class="btn btn-sm btn-outline" href="application_view.php?no=<?= urlencode($row['application_no']) ?>">ดูรายละเอียด</a></td>

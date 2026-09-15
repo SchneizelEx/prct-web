@@ -105,7 +105,7 @@ $errorMsg = flash_get('error');
         <div class="item"><div class="label">วันเกิด</div><div class="value"><?= h(date('d/m/Y', strtotime((string) $app['birth_date']))) ?></div></div>
         <div class="item"><div class="label">โทรศัพท์</div><div class="value"><?= h($app['phone']) ?></div></div>
         <div class="item"><div class="label">อีเมล</div><div class="value"><?= h($app['email'] ?? '-') ?></div></div>
-        <div class="item"><div class="label">ระดับ/สาขา</div><div class="value"><?= h($app['level'] . ' สาขา' . $app['department_name']) ?></div></div>
+        <div class="item"><div class="label">ระดับ/สาขา</div><div class="value"><?= h(format_level_label($app['level'], $app['program_type']) . ' สาขา' . $app['department_name']) ?></div></div>
         <div class="item"><div class="label">วันที่สมัคร</div><div class="value"><?= h(date('d/m/Y H:i', strtotime((string) $app['created_at']))) ?></div></div>
     </div>
 </div>

@@ -109,15 +109,43 @@ function generate_application_no(mysqli $db, int $academicYear): string
 // สาขาวิชา
 // ---------------------------------------------------------------------
 
-/** @return array<int, array{id:int, code:string, name:string, level:string}> */
-function get_active_departments(mysqli $db, string $level): array
+/** แสดงระดับรวมภาค เช่น "ปวช." หรือ "ปวส. ภาคปกติ" */
+function format_level_label(string $level, string $programType): string
+{
+    return $programType !== '' ? $level . ' ' . $programType : $level;
+}
+
+/**
+ * รายการกลุ่มระดับ/ภาคที่เปิดรับสมัครทั้งหมด (ใช้สร้าง dropdown แบบจัดกลุ่ม)
+ * ปวช. ไม่มีภาค (program_type = ''), ปวส. แยกเป็นภาคปกติ/ภาคสมทบ
+ *
+ * @return array<int, array{level:string, program_type:string, label:string, departments:array}>
+ */
+function get_department_groups(mysqli $db): array
+{
+    $groups = [
+        ['level' => 'ปวช.', 'program_type' => '', 'label' => 'ระดับ ปวช.'],
+        ['level' => 'ปวส.', 'program_type' => 'ภาคปกติ', 'label' => 'ระดับ ปวส. ภาคปกติ'],
+        ['level' => 'ปวส.', 'program_type' => 'ภาคสมทบ', 'label' => 'ระดับ ปวส. ภาคสมทบ'],
+    ];
+
+    foreach ($groups as &$group) {
+        $group['departments'] = get_active_departments($db, $group['level'], $group['program_type']);
+    }
+    unset($group);
+
+    return $groups;
+}
+
+/** @return array<int, array{id:int, code:string, name:string, level:string, program_type:string}> */
+function get_active_departments(mysqli $db, string $level, string $programType = ''): array
 {
     $stmt = $db->prepare(
-        'SELECT id, code, name, level FROM admission_departments
-         WHERE level = ? AND is_active = 1
+        'SELECT id, code, name, level, program_type FROM admission_departments
+         WHERE level = ? AND program_type = ? AND is_active = 1
          ORDER BY sort_order ASC, name ASC'
     );
-    $stmt->bind_param('s', $level);
+    $stmt->bind_param('ss', $level, $programType);
     $stmt->execute();
     $rows = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
     $stmt->close();
@@ -128,7 +156,7 @@ function get_active_departments(mysqli $db, string $level): array
 /** ค้นหาสาขาวิชาที่ยังเปิดใช้งานจาก id (ใช้ตรวจสอบตอนบันทึกใบสมัคร) */
 function find_active_department(mysqli $db, int $departmentId): ?array
 {
-    $stmt = $db->prepare('SELECT id, code, name, level FROM admission_departments WHERE id = ? AND is_active = 1');
+    $stmt = $db->prepare('SELECT id, code, name, level, program_type FROM admission_departments WHERE id = ? AND is_active = 1');
     $stmt->bind_param('i', $departmentId);
     $stmt->execute();
     $row = $stmt->get_result()->fetch_assoc();

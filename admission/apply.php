@@ -8,10 +8,7 @@ if (!ADMISSION_OPEN) {
 }
 
 $db = get_db();
-$departmentsByLevel = [
-    'ปวช.' => get_active_departments($db, 'ปวช.'),
-    'ปวส.' => get_active_departments($db, 'ปวส.'),
-];
+$departmentGroups = get_department_groups($db);
 
 $prefixOptions = ['นาย', 'นาง', 'นางสาว', 'เด็กชาย', 'เด็กหญิง'];
 
@@ -132,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             $uploadedFiles['photo_path'] = handle_document_upload('photo', $tempDir, 'photo', true);
             $uploadedFiles['id_card_path'] = handle_document_upload('id_card', $tempDir, 'idcard', true);
-            $uploadedFiles['transcript_path'] = handle_document_upload('transcript', $tempDir, 'transcript', true);
+            $uploadedFiles['transcript_path'] = handle_document_upload('transcript', $tempDir, 'transcript', false);
             $uploadedFiles['house_reg_path'] = handle_document_upload('house_reg', $tempDir, 'housereg', false);
         } catch (RuntimeException $e) {
             $errors[] = $e->getMessage();
@@ -151,11 +148,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $stmt = $db->prepare(
                     'INSERT INTO admission_applications
-                        (application_no, academic_year, level, department_id, prefix, first_name, last_name,
+                        (application_no, academic_year, level, program_type, department_id, prefix, first_name, last_name,
                          national_id, birth_date, gender, phone, email, address, subdistrict, district, province,
                          zipcode, previous_school, gpa, guardian_name, guardian_phone, guardian_relation,
                          photo_path, id_card_path, transcript_path, house_reg_path)
-                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
+                     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)'
                 );
 
                 $academicYear = ADMISSION_ACADEMIC_YEAR;
@@ -163,10 +160,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $guardianRelation = $old['guardian_relation'] !== '' ? $old['guardian_relation'] : null;
 
                 $stmt->bind_param(
-                    'sisissssssssssssssdsssssss',
+                    'sississssssssssssssdsssssss',
                     $candidate,
                     $academicYear,
                     $department['level'],
+                    $department['program_type'],
                     $departmentId,
                     $old['prefix'],
                     $old['first_name'],
@@ -287,12 +285,12 @@ require __DIR__ . '/includes/public_layout_top.php';
                     <label for="department_id">ระดับ/สาขาวิชาที่ต้องการสมัคร <span class="required">*</span></label>
                     <select id="department_id" name="department_id" required>
                         <option value="">-- กรุณาเลือก --</option>
-                        <?php foreach ($departmentsByLevel as $level => $departments): ?>
-                            <?php if ($departments !== []): ?>
-                                <optgroup label="ระดับ <?= h($level) ?>">
-                                    <?php foreach ($departments as $d): ?>
+                        <?php foreach ($departmentGroups as $group): ?>
+                            <?php if ($group['departments'] !== []): ?>
+                                <optgroup label="<?= h($group['label']) ?>">
+                                    <?php foreach ($group['departments'] as $d): ?>
                                         <option value="<?= (int) $d['id'] ?>" <?= (string) $d['id'] === $old['department_id'] ? 'selected' : '' ?>>
-                                            <?= h($level . ' สาขา' . $d['name']) ?>
+                                            <?= h($group['label'] . ' สาขา' . $d['name']) ?>
                                         </option>
                                     <?php endforeach; ?>
                                 </optgroup>
@@ -427,8 +425,9 @@ require __DIR__ . '/includes/public_layout_top.php';
                     <input type="file" id="id_card" name="id_card" accept=".jpg,.jpeg,.png,.pdf" required>
                 </div>
                 <div class="form-group">
-                    <label for="transcript">ระเบียนแสดงผลการเรียน (ปพ.1) <span class="required">*</span></label>
-                    <input type="file" id="transcript" name="transcript" accept=".jpg,.jpeg,.png,.pdf" required>
+                    <label for="transcript">ระเบียนแสดงผลการเรียน (ปพ.1)</label>
+                    <input type="file" id="transcript" name="transcript" accept=".jpg,.jpeg,.png,.pdf">
+                    <p class="hint">ยังไม่มีก็สมัครได้ นำมายื่นภายหลังพร้อมเอกสารฉบับจริงได้</p>
                 </div>
                 <div class="form-group">
                     <label for="house_reg">สำเนาทะเบียนบ้าน (ถ้ามี)</label>

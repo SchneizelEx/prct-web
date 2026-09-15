@@ -15,17 +15,20 @@ USE `prct_admission`;
 
 -- ---------------------------------------------------------------------
 -- ตารางสาขาวิชาที่เปิดรับสมัคร แยกตามระดับชั้น (ปวช. / ปวส.)
+-- ระดับ ปวส. แยกย่อยเป็นภาคปกติ/ภาคสมทบอีกชั้นหนึ่งผ่านคอลัมน์ program_type
+-- (ปวช. ไม่มีภาค จึงเก็บเป็นค่าว่าง '')
 -- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `admission_departments` (
-    `id`         INT UNSIGNED NOT NULL AUTO_INCREMENT,
-    `level`      ENUM('ปวช.', 'ปวส.') NOT NULL,
-    `code`       VARCHAR(20)  NOT NULL,
-    `name`       VARCHAR(150) NOT NULL,
-    `is_active`  TINYINT(1)   NOT NULL DEFAULT 1,
-    `sort_order` INT          NOT NULL DEFAULT 0,
-    `created_at` DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    `id`           INT UNSIGNED NOT NULL AUTO_INCREMENT,
+    `level`        ENUM('ปวช.', 'ปวส.') NOT NULL,
+    `program_type` ENUM('', 'ภาคปกติ', 'ภาคสมทบ') NOT NULL DEFAULT '',
+    `code`         VARCHAR(20)  NOT NULL,
+    `name`         VARCHAR(150) NOT NULL,
+    `is_active`    TINYINT(1)   NOT NULL DEFAULT 1,
+    `sort_order`   INT          NOT NULL DEFAULT 0,
+    `created_at`   DATETIME     NOT NULL DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (`id`),
-    UNIQUE KEY `uq_department_level_code` (`level`, `code`)
+    UNIQUE KEY `uq_department_level_program_code` (`level`, `program_type`, `code`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_0900_ai_ci;
 
 -- ---------------------------------------------------------------------
@@ -52,6 +55,7 @@ CREATE TABLE IF NOT EXISTS `admission_applications` (
     `application_no`     VARCHAR(20)  NOT NULL,
     `academic_year`      SMALLINT UNSIGNED NOT NULL,
     `level`              ENUM('ปวช.', 'ปวส.') NOT NULL,
+    `program_type`       ENUM('', 'ภาคปกติ', 'ภาคสมทบ') NOT NULL DEFAULT '',
     `department_id`      INT UNSIGNED NOT NULL,
 
     -- ข้อมูลผู้สมัคร
@@ -125,19 +129,20 @@ CREATE TABLE IF NOT EXISTS `admission_status_logs` (
 -- ---------------------------------------------------------------------
 -- ข้อมูลตั้งต้น: สาขาวิชาที่เปิดรับสมัคร (แก้ไข/เพิ่มเติมได้ภายหลังผ่านหลังบ้าน)
 -- ---------------------------------------------------------------------
-INSERT IGNORE INTO `admission_departments` (`level`, `code`, `name`, `sort_order`) VALUES
-('ปวช.', 'ACC',  'การบัญชี', 1),
-('ปวช.', 'IT',   'เทคโนโลยีสารสนเทศ', 2),
-('ปวช.', 'RETAIL', 'ธุรกิจค้าปลีก', 3),
-('ปวช.', 'ELEC', 'ไฟฟ้ากำลัง', 4),
-('ปวช.', 'ELECTRONICS', 'อิเล็กทรอนิกส์', 5),
-('ปวช.', 'AUTO', 'ยานยนต์', 6),
-('ปวส.', 'ACC',  'การบัญชี', 1),
-('ปวส.', 'DBIZ', 'เทคโนโลยีธุรกิจดิจิทัล', 2),
-('ปวส.', 'RETAIL', 'ธุรกิจค้าปลีก', 3),
-('ปวส.', 'ELEC', 'ไฟฟ้า', 4),
-('ปวส.', 'ELECTRONICS', 'อิเล็กทรอนิกส์', 5),
-('ปวส.', 'AUTO', 'เทคนิคยานยนต์', 6);
+INSERT IGNORE INTO `admission_departments` (`level`, `program_type`, `code`, `name`, `sort_order`) VALUES
+-- ปวช. (ไม่แยกภาค)
+('ปวช.', '', 'ACC',    'บัญชี', 1),
+('ปวช.', '', 'GAME',   'เกมและแอนิเมชัน', 2),
+('ปวช.', '', 'RETAIL', 'ธุรกิจค้าปลีก', 3),
+-- ปวส. ภาคปกติ
+('ปวส.', 'ภาคปกติ', 'ACC',    'การบัญชี', 1),
+('ปวส.', 'ภาคปกติ', 'DBIZ',   'เทคโนโลยีธุรกิจดิจิทัล', 2),
+('ปวส.', 'ภาคปกติ', 'RETAIL', 'การจัดการธุรกิจค้าปลีก', 3),
+-- ปวส. ภาคสมทบ
+('ปวส.', 'ภาคสมทบ', 'ACC',    'การบัญชี', 1),
+('ปวส.', 'ภาคสมทบ', 'DBIZ',   'เทคโนโลยีธุรกิจดิจิทัล', 2),
+('ปวส.', 'ภาคสมทบ', 'RETAIL', 'การจัดการธุรกิจค้าปลีก', 3),
+('ปวส.', 'ภาคสมทบ', 'ELEC',   'ไฟฟ้า', 4);
 
 -- หมายเหตุ: บัญชีผู้ดูแลระบบชุดแรกให้สร้างผ่านหน้า admin/setup.php
 -- หลังจากตั้งค่าฐานข้อมูลเสร็จ (ระบบจะอนุญาตให้สร้างได้เฉพาะตอนที่ยังไม่มี

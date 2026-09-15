@@ -8,6 +8,7 @@ $db = get_db();
 $academicYear = ADMISSION_ACADEMIC_YEAR;
 
 $level = $_GET['level'] ?? '';
+$programType = $_GET['program_type'] ?? '';
 $status = $_GET['status'] ?? '';
 $statuses = ['รอตรวจสอบ', 'ตรวจสอบแล้ว', 'ขอเอกสารเพิ่มเติม', 'อนุมัติ', 'ไม่อนุมัติ'];
 
@@ -20,6 +21,11 @@ if (in_array($level, ['ปวช.', 'ปวส.'], true)) {
     $params[] = $level;
     $types .= 's';
 }
+if (in_array($programType, ['ภาคปกติ', 'ภาคสมทบ'], true)) {
+    $where[] = 'a.program_type = ?';
+    $params[] = $programType;
+    $types .= 's';
+}
 if (in_array($status, $statuses, true)) {
     $where[] = 'a.status = ?';
     $params[] = $status;
@@ -28,7 +34,7 @@ if (in_array($status, $statuses, true)) {
 
 $whereSql = implode(' AND ', $where);
 $stmt = $db->prepare(
-    "SELECT a.application_no, a.level, d.name AS department_name, a.prefix, a.first_name, a.last_name,
+    "SELECT a.application_no, a.level, a.program_type, d.name AS department_name, a.prefix, a.first_name, a.last_name,
             a.national_id, a.birth_date, a.gender, a.phone, a.email, a.address, a.subdistrict, a.district,
             a.province, a.zipcode, a.previous_school, a.gpa, a.guardian_name, a.guardian_phone,
             a.guardian_relation, a.status, a.created_at
@@ -48,14 +54,14 @@ $out = fopen('php://output', 'w');
 fwrite($out, "\xEF\xBB\xBF"); // UTF-8 BOM เพื่อให้ Excel แสดงภาษาไทยถูกต้อง
 
 fputcsv($out, [
-    'เลขที่ใบสมัคร', 'ระดับ', 'สาขา', 'คำนำหน้า', 'ชื่อ', 'นามสกุล', 'เลขบัตรประชาชน',
+    'เลขที่ใบสมัคร', 'ระดับ', 'ภาค', 'สาขา', 'คำนำหน้า', 'ชื่อ', 'นามสกุล', 'เลขบัตรประชาชน',
     'วันเกิด', 'เพศ', 'โทรศัพท์', 'อีเมล', 'ที่อยู่', 'ตำบล', 'อำเภอ', 'จังหวัด', 'รหัสไปรษณีย์',
     'สถานศึกษาเดิม', 'เกรดเฉลี่ย', 'ชื่อผู้ปกครอง', 'โทรศัพท์ผู้ปกครอง', 'ความเกี่ยวข้อง', 'สถานะ', 'วันที่สมัคร',
 ]);
 
 while ($row = $result->fetch_assoc()) {
     fputcsv($out, [
-        $row['application_no'], $row['level'], $row['department_name'], $row['prefix'], $row['first_name'],
+        $row['application_no'], $row['level'], $row['program_type'], $row['department_name'], $row['prefix'], $row['first_name'],
         $row['last_name'], $row['national_id'], $row['birth_date'], $row['gender'], $row['phone'],
         $row['email'], $row['address'], $row['subdistrict'], $row['district'], $row['province'],
         $row['zipcode'], $row['previous_school'], $row['gpa'], $row['guardian_name'], $row['guardian_phone'],

@@ -18,7 +18,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'กรุณากรอกเลขที่ใบสมัครและเลขบัตรประจำตัวประชาชนให้ครบถ้วน';
     } else {
         $stmt = $db->prepare(
-            'SELECT a.application_no, a.level, d.name AS department_name, a.prefix, a.first_name, a.last_name,
+            'SELECT a.application_no, a.level, a.program_type, d.name AS department_name, a.prefix, a.first_name, a.last_name,
                     a.status, a.admin_note, a.created_at, a.updated_at
              FROM admission_applications a
              JOIN admission_departments d ON d.id = a.department_id
@@ -80,7 +80,7 @@ require __DIR__ . '/includes/public_layout_top.php';
             </div>
             <div class="item">
                 <div class="label">ระดับ/สาขา</div>
-                <div class="value"><?= h($application['level'] . ' สาขา' . $application['department_name']) ?></div>
+                <div class="value"><?= h(format_level_label($application['level'], $application['program_type']) . ' สาขา' . $application['department_name']) ?></div>
             </div>
             <div class="item">
                 <div class="label">วันที่สมัคร</div>

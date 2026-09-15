@@ -47,7 +47,7 @@ $fullName = $app['prefix'] . $app['first_name'] . ' ' . $app['last_name'];
     <div class="print-photo-box">ติดรูปถ่าย<br>ขนาด 1 นิ้ว</div>
     <div class="head">
         <h1><?= h(SCHOOL_NAME) ?></h1>
-        <h2>ใบสมัครเข้าศึกษาต่อ ระดับ<?= h($app['level']) ?> ปีการศึกษา <?= h((string) $app['academic_year']) ?></h2>
+        <h2>ใบสมัครเข้าศึกษาต่อ ระดับ<?= h(format_level_label($app['level'], $app['program_type'])) ?> ปีการศึกษา <?= h((string) $app['academic_year']) ?></h2>
         <p>เลขที่ใบสมัคร: <strong><?= h($app['application_no']) ?></strong></p>
     </div>
 
@@ -66,7 +66,7 @@ $fullName = $app['prefix'] . $app['first_name'] . ' ' . $app['last_name'];
             <td>อีเมล: <?= h($app['email'] ?? '-') ?></td>
         </tr>
         <tr>
-            <td colspan="2">สาขาที่สมัคร: ระดับ<?= h($app['level']) ?> สาขา<?= h($app['department_name']) ?></td>
+            <td colspan="2">สาขาที่สมัคร: ระดับ<?= h(format_level_label($app['level'], $app['program_type'])) ?> สาขา<?= h($app['department_name']) ?></td>
         </tr>
     </table>
 

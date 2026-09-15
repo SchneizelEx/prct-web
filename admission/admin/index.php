@@ -23,21 +23,21 @@ foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
 $stmt->close();
 
 $levelCounts = [];
-$stmt = $db->prepare('SELECT level, COUNT(*) AS total FROM admission_applications WHERE academic_year = ? GROUP BY level');
+$stmt = $db->prepare('SELECT level, program_type, COUNT(*) AS total FROM admission_applications WHERE academic_year = ? GROUP BY level, program_type');
 $stmt->bind_param('i', $academicYear);
 $stmt->execute();
 foreach ($stmt->get_result()->fetch_all(MYSQLI_ASSOC) as $row) {
-    $levelCounts[$row['level']] = (int) $row['total'];
+    $levelCounts[format_level_label($row['level'], $row['program_type'])] = (int) $row['total'];
 }
 $stmt->close();
 
 $deptStmt = $db->prepare(
-    'SELECT d.level, d.name, COUNT(a.id) AS total
+    'SELECT d.level, d.program_type, d.name, COUNT(a.id) AS total
      FROM admission_departments d
      LEFT JOIN admission_applications a ON a.department_id = d.id AND a.academic_year = ?
      WHERE d.is_active = 1
-     GROUP BY d.id, d.level, d.name
-     ORDER BY d.level, d.sort_order'
+     GROUP BY d.id, d.level, d.program_type, d.name
+     ORDER BY d.level, d.program_type, d.sort_order'
 );
 $deptStmt->bind_param('i', $academicYear);
 $deptStmt->execute();
@@ -45,7 +45,7 @@ $deptRows = $deptStmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $deptStmt->close();
 
 $recentStmt = $db->prepare(
-    'SELECT application_no, prefix, first_name, last_name, level, status, created_at
+    'SELECT application_no, prefix, first_name, last_name, level, program_type, status, created_at
      FROM admission_applications
      WHERE academic_year = ?
      ORDER BY id DESC LIMIT 10'
@@ -82,8 +82,12 @@ require __DIR__ . '/includes/layout_top.php';
             <div class="label">ปวช.</div>
         </div>
         <div class="summary-card">
-            <div class="num"><?= $levelCounts['ปวส.'] ?? 0 ?></div>
-            <div class="label">ปวส.</div>
+            <div class="num"><?= $levelCounts['ปวส. ภาคปกติ'] ?? 0 ?></div>
+            <div class="label">ปวส. ภาคปกติ</div>
+        </div>
+        <div class="summary-card">
+            <div class="num"><?= $levelCounts['ปวส. ภาคสมทบ'] ?? 0 ?></div>
+            <div class="label">ปวส. ภาคสมทบ</div>
         </div>
     </div>
 </div>
@@ -98,7 +102,7 @@ require __DIR__ . '/includes/layout_top.php';
             <tbody>
                 <?php foreach ($deptRows as $row): ?>
                     <tr>
-                        <td><?= h($row['level']) ?></td>
+                        <td><?= h(format_level_label($row['level'], $row['program_type'])) ?></td>
                         <td><?= h($row['name']) ?></td>
                         <td><?= (int) $row['total'] ?></td>
                     </tr>
@@ -120,7 +124,7 @@ require __DIR__ . '/includes/layout_top.php';
                     <tr>
                         <td><?= h($row['application_no']) ?></td>
                         <td><?= h($row['prefix'] . $row['first_name'] . ' ' . $row['last_name']) ?></td>
-                        <td><?= h($row['level']) ?></td>
+                        <td><?= h(format_level_label($row['level'], $row['program_type'])) ?></td>
                         <td><span class="badge status-<?= h($row['status']) ?>"><?= h($row['status']) ?></span></td>
                         <td><?= h(date('d/m/Y H:i', strtotime((string) $row['created_at']))) ?></td>
                         <td><a class="btn btn-sm btn-outline" href="application_view.php?no=<?= urlencode($row['application_no']) ?>">ดูรายละเอียด</a></td>
