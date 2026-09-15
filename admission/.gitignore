@@ -1,0 +1,7 @@
+# ห้ามส่งไฟล์ตั้งค่าที่มีรหัสผ่านฐานข้อมูลขึ้น Git
+config.php
+
+# ไฟล์เอกสารที่ผู้สมัครอัปโหลด ไม่ควรอยู่ใน Git
+uploads/*
+!uploads/.gitkeep
+!uploads/.htaccess

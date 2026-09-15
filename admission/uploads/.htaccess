@@ -1,0 +1,9 @@
+# ป้องกันไม่ให้เข้าถึงไฟล์เอกสารที่อัปโหลดโดยตรงผ่าน URL
+# (ต้องเข้าผ่าน admin/download.php ที่ตรวจสอบสิทธิ์ผู้ดูแลระบบเท่านั้น)
+<IfModule mod_authz_core.c>
+    Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+</IfModule>
